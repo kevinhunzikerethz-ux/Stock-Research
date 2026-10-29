@@ -39,6 +39,26 @@ SCHEMA_STATEMENTS = (
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS annual_eps (
+        company_id INTEGER NOT NULL,
+        fiscal_year INTEGER NOT NULL,
+        period_start TEXT NOT NULL,
+        period_end TEXT NOT NULL,
+        reported_eps REAL NOT NULL,
+        split_adjusted_eps REAL NOT NULL,
+        filed_date TEXT,
+        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (company_id, fiscal_year),
+        FOREIGN KEY (company_id)
+            REFERENCES companies(company_id)
+            ON DELETE CASCADE
+    )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_annual_eps_period
+    ON annual_eps(company_id, period_end)
+    """,
+    """
     CREATE INDEX IF NOT EXISTS idx_daily_prices_date
     ON daily_prices(price_date)
     """,
@@ -147,4 +167,3 @@ def initialize_database(connection: sqlite3.Connection) -> None:
     except Exception:
         connection.rollback()
         raise
-
