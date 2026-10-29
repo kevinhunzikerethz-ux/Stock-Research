@@ -35,3 +35,6 @@ __pycache__/
 # Virtual environments
 .venv/
 venv/
+
+# Raw SEC downloads
+data/sec_raw/
