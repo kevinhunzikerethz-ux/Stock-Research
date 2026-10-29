@@ -1,28 +1,58 @@
 
-import sqlite3
-from pathlib import Path
+"""Integration tests for the SQLite database."""
 
-database_path = Path(__file__).parent / "stock_research.db"
+from src.stock_research.database.connection import (
+    DATABASE_PATH,
+    get_connection,
+)
 
-with sqlite3.connect(database_path) as connection:
-    tables = connection.execute("""
-        SELECT name
-        FROM sqlite_master
-        WHERE type = 'table'
-        ORDER BY name
-    """).fetchall()
 
-    print("Available tables:")
-    for (table_name,) in tables:
-        print(f"  {table_name}")
+def test_database_file_exists():
+    """Verify that the expected database file exists."""
+    assert DATABASE_PATH.exists(), (
+        f"Database file not found: {DATABASE_PATH}"
+    )
 
-    print("\nLatest Apple prices:")
-    rows = connection.execute("""
-        SELECT Date, Close, Volume
-        FROM prices_aapl
-        ORDER BY Date DESC
-        LIMIT 5
-    """).fetchall()
 
-    for row in rows:
-        print(row)
+def test_database_contains_price_tables():
+    """Verify that the existing historical price tables are present."""
+    with get_connection() as connection:
+        tables = {
+            row["name"]
+            for row in connection.execute(
+                """
+                SELECT name
+                FROM sqlite_master
+                WHERE type = 'table'
+                """
+            ).fetchall()
+        }
+
+    expected_tables = {
+        "prices_aapl",
+        "prices_iren",
+        "prices_msft",
+        "prices_nvo",
+    }
+
+    missing_tables = expected_tables - tables
+
+    assert not missing_tables, (
+        f"Missing expected price tables: {sorted(missing_tables)}. "
+        f"Database: {DATABASE_PATH}"
+    )
+
+
+def test_apple_prices_are_available():
+    """Verify that Apple historical prices can be queried."""
+    with get_connection() as connection:
+        result = connection.execute(
+            """
+            SELECT COUNT(*) AS row_count
+            FROM prices_aapl
+            """
+        ).fetchone()
+
+    assert result["row_count"] > 0, (
+        "The Apple price table contains no records."
+    )
